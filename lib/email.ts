@@ -37,7 +37,7 @@ export async function sendWelcomeEmail(to: string) {
 
 function welcomeText() {
   return [
-    "This is a small project — a map of places where people have felt something.",
+    "Welcome to the community of people helping others find places where they can feel good.",
     "",
     "If somewhere comes to mind — a park bench, a particular café, a hotel you can't forget — come and tell us about it. Three short questions, and we'll add it to the map.",
     "",
@@ -58,7 +58,7 @@ function welcomeHtml() {
             <tr>
               <td style="padding:0 8px;">
                 <p style="font-family:Georgia,serif;font-size:22px;line-height:1.4;margin:0 0 24px 0;color:#1f1d1a;">
-                  This is a small project — a map of places where people have felt something.
+                  Welcome to the community of people helping others find places where they can feel good.
                 </p>
                 <p style="font-size:16px;line-height:1.65;margin:0 0 24px 0;color:#1f1d1a;">
                   If somewhere comes to mind — a park bench, a particular café, a hotel you can't forget — come and tell us about it. Three short questions, and we'll add it to the map.
