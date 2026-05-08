@@ -67,8 +67,7 @@ const seedPlaces: SeedPlace[] = [
     entry: {
       specialToYou:
         "Fifteen rocks in raked gravel. From any single vantage point you can only see fourteen. The whole place is built around what you can't quite hold.",
-      energy:
-        "Spacious. Like the rocks are doing the listening, not you.",
+      energy: "Spacious. Like the rocks are doing the listening, not you.",
       whatToDo:
         "Sit on the wooden veranda overlooking the rock garden. Don't try to count the stones. Let it be longer than feels useful.",
     },
@@ -123,9 +122,7 @@ async function main() {
     .limit(1);
 
   if (!seedUser) {
-    throw new Error(
-      `Seed user ${SEED_USER_EMAIL} not found. Sign up first.`,
-    );
+    throw new Error(`Seed user ${SEED_USER_EMAIL} not found. Sign up first.`);
   }
 
   const now = new Date();
@@ -165,9 +162,7 @@ async function main() {
     const existingEntry = await db
       .select({ id: entries.id })
       .from(entries)
-      .where(
-        and(eq(entries.placeId, placeId), eq(entries.userId, seedUser.id)),
-      )
+      .where(and(eq(entries.placeId, placeId), eq(entries.userId, seedUser.id)))
       .limit(1);
 
     if (existingEntry.length === 0) {

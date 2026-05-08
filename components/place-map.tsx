@@ -44,9 +44,10 @@ export function PlaceMap() {
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE_URL,
+      projection: { name: "mercator" },
       center: [0, 25],
-      zoom: 1.4,
-      minZoom: 1,
+      zoom: 1.6,
+      minZoom: 1.2,
       maxZoom: 18,
       pitch: 0,
       bearing: 0,

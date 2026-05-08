@@ -5,8 +5,7 @@ config({ path: ".env" });
 import { Webhook } from "svix";
 
 const url =
-  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") +
-  "/api/webhooks/clerk";
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") + "/api/webhooks/clerk";
 
 const secret = process.env.CLERK_WEBHOOK_SECRET;
 if (!secret) throw new Error("CLERK_WEBHOOK_SECRET missing");
