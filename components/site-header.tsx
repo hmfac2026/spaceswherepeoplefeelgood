@@ -1,0 +1,31 @@
+import Link from "next/link";
+import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+
+export function SiteHeader() {
+  return (
+    <header className="border-rule/60 bg-paper/80 sticky top-0 z-30 flex items-center justify-between border-b px-6 py-4 backdrop-blur">
+      <Link
+        href="/"
+        className="font-serif text-lg tracking-tight hover:opacity-80"
+      >
+        Spaces Where People Feel Good
+      </Link>
+      <nav className="flex items-center gap-3 text-sm">
+        <Show when="signed-out">
+          <SignInButton mode="modal">
+            <button className="text-ink-soft hover:text-ink rounded-md px-3 py-1.5 transition-colors">
+              Sign in
+            </button>
+          </SignInButton>
+        </Show>
+        <Show when="signed-in">
+          <UserButton
+            appearance={{
+              elements: { avatarBox: "h-8 w-8" },
+            }}
+          />
+        </Show>
+      </nav>
+    </header>
+  );
+}
