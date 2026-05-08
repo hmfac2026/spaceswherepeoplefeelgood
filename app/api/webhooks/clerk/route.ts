@@ -48,12 +48,7 @@ export async function POST(req: NextRequest) {
       "svix-signature": svixSignature,
     }) as ClerkEvent;
   } catch (err) {
-    console.error("svix verify failed", {
-      message: (err as Error).message,
-      secretPrefix: secret.slice(0, 10),
-      bodyLen: body.length,
-      svixIdPrefix: svixId.slice(0, 8),
-    });
+    console.error("svix verify failed", (err as Error).message);
     return new Response("Invalid signature", { status: 400 });
   }
 
