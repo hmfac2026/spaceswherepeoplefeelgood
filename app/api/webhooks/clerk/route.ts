@@ -2,6 +2,7 @@ import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import type { NextRequest } from "next/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let evt;
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     const displayName =
       [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || null;
 
-    await db
+    const inserted = await db
       .insert(users)
       .values({
         clerkUserId: u.id,
@@ -36,7 +37,12 @@ export async function POST(req: NextRequest) {
         displayName,
         isAdmin,
       })
-      .onConflictDoNothing({ target: users.clerkUserId });
+      .onConflictDoNothing({ target: users.clerkUserId })
+      .returning({ id: users.id });
+
+    if (inserted.length) {
+      await sendWelcomeEmail(primaryEmail);
+    }
   }
 
   return new Response(null, { status: 204 });
