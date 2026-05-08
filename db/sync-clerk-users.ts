@@ -17,7 +17,8 @@ type ClerkUser = {
 async function main() {
   const secret = process.env.CLERK_SECRET_KEY;
   const dbUrl = process.env.DATABASE_URL;
-  if (!secret || !dbUrl) throw new Error("Missing CLERK_SECRET_KEY or DATABASE_URL");
+  if (!secret || !dbUrl)
+    throw new Error("Missing CLERK_SECRET_KEY or DATABASE_URL");
 
   const pool = new Pool({ connectionString: dbUrl });
   const db = drizzle(pool);
