@@ -59,10 +59,7 @@ async function getAffirmationState(placeId: string) {
       .select({ id: affirmations.id })
       .from(affirmations)
       .where(
-        and(
-          eq(affirmations.placeId, placeId),
-          eq(affirmations.userId, u.id),
-        ),
+        and(eq(affirmations.placeId, placeId), eq(affirmations.userId, u.id)),
       )
       .limit(1);
     return { count: total, affirmed: !!row };

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { isAdmin } from "@/lib/admin";
 
 function PinIcon() {
   return (
@@ -22,7 +23,9 @@ function PinIcon() {
   );
 }
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const admin = await isAdmin();
+
   return (
     <header className="border-rule/60 bg-paper/80 sticky top-0 z-30 flex items-center justify-between border-b px-6 py-4 backdrop-blur">
       <Link
@@ -32,6 +35,14 @@ export function SiteHeader() {
         Spaces Where People Feel Good
       </Link>
       <nav className="flex items-center gap-3 text-sm">
+        {admin && (
+          <Link
+            href="/admin"
+            className="text-ink-soft hover:text-ink rounded-md px-3 py-1.5 transition-colors"
+          >
+            Admin
+          </Link>
+        )}
         <Show when="signed-out">
           <SignInButton mode="modal">
             <button className="text-ink-soft hover:text-ink rounded-md px-3 py-1.5 transition-colors">

@@ -4,7 +4,10 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { entries, places, users } from "@/db/schema";
 import { CATEGORY_VALUES, type CategoryValue } from "@/lib/categories";
-import { sendSubmissionReceivedEmail } from "@/lib/email";
+import {
+  sendAdminNotification,
+  sendSubmissionReceivedEmail,
+} from "@/lib/email";
 import { placeDetails } from "@/lib/google-places";
 import type { PlaceMapItem } from "@/lib/types";
 
@@ -165,6 +168,12 @@ export async function POST(req: Request) {
     specialToYou: special,
     energy,
     whatToDo,
+  });
+
+  await sendAdminNotification({
+    kind: createdNewPlace ? "new_place" : "new_entry",
+    placeName,
+    submitter: user.email,
   });
 
   return NextResponse.json({

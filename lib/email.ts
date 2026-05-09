@@ -131,6 +131,104 @@ function submissionHtml(d: SubmissionDetails) {
 </html>`;
 }
 
+export async function sendPlaceLiveEmail(
+  to: string,
+  placeName: string,
+  placeId: string,
+) {
+  const r = client();
+  if (!r) {
+    console.warn("RESEND_API_KEY not set; skipping place-live email");
+    return;
+  }
+
+  const link = `${appUrl()}/place/${placeId}`;
+  const { error } = await r.emails.send({
+    from: `Spaces Where People Feel Good <${fromAddress()}>`,
+    to,
+    subject: `${placeName} is on the map.`,
+    text: [
+      `${placeName} is now on the map. Thanks for adding it.`,
+      "",
+      `See it here: ${link}`,
+    ].join("\n"),
+    html: liveHtml(placeName, link),
+  });
+  if (error) console.error("Place-live email failed", error);
+}
+
+function liveHtml(placeName: string, link: string) {
+  const escape = (s: string) =>
+    s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#faf7f2;color:#1f1d1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf7f2;">
+      <tr><td align="center" style="padding:48px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;">
+          <tr><td style="padding:0 8px;">
+            <p style="font-family:Georgia,serif;font-size:22px;line-height:1.4;margin:0 0 24px 0;">
+              ${escape(placeName)} is on the map.
+            </p>
+            <p style="font-size:16px;line-height:1.65;margin:0 0 28px 0;">
+              Thanks for adding it.
+            </p>
+            <p style="margin:0;">
+              <a href="${link}" style="display:inline-block;padding:12px 20px;background:#5f7a5b;color:#faf7f2;text-decoration:none;border-radius:6px;font-size:15px;">
+                See it on the map
+              </a>
+            </p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+}
+
+export type AdminNotifyKind =
+  | { kind: "new_place"; placeName: string; submitter: string }
+  | { kind: "new_entry"; placeName: string; submitter: string };
+
+export async function sendAdminNotification(notice: AdminNotifyKind) {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) {
+    console.warn("ADMIN_EMAIL not set; skipping admin notification");
+    return;
+  }
+  const r = client();
+  if (!r) {
+    console.warn("RESEND_API_KEY not set; skipping admin notification");
+    return;
+  }
+
+  const adminLink = `${appUrl()}/admin`;
+  const subject =
+    notice.kind === "new_place"
+      ? `New place pending: ${notice.placeName}`
+      : `New entry pending: ${notice.placeName}`;
+  const body = [
+    notice.kind === "new_place"
+      ? `${notice.submitter} submitted a new place: ${notice.placeName}.`
+      : `${notice.submitter} added a new entry to ${notice.placeName}.`,
+    "",
+    `Review it: ${adminLink}`,
+  ].join("\n");
+
+  const { error } = await r.emails.send({
+    from: `Spaces Where People Feel Good <${fromAddress()}>`,
+    to: adminEmail,
+    subject,
+    text: body,
+  });
+  if (error) console.error("Admin notification failed", error);
+}
+
 function welcomeText() {
   return [
     "Welcome to the community of people helping others find places where they can feel good.",
