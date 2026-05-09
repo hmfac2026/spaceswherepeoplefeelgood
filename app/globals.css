@@ -26,8 +26,13 @@ body {
   color: var(--color-ink);
 }
 
-/* Map markers */
+/* Map markers (Leaflet divIcon) */
+.swpfg-marker-wrap {
+  background: transparent !important;
+  border: 0 !important;
+}
 .swpfg-marker {
+  display: block;
   width: 18px;
   height: 18px;
   border-radius: 9999px;
@@ -36,20 +41,46 @@ body {
     0 1px 3px rgba(0, 0, 0, 0.18),
     0 0 0 1px rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  padding: 0;
   transform-origin: center;
   transition:
     transform 160ms ease,
     box-shadow 160ms ease;
   animation: swpfg-pulse 1.6s ease-out 1;
 }
-.swpfg-marker:hover,
-.swpfg-marker:focus-visible {
+.swpfg-marker-wrap:hover .swpfg-marker {
   transform: scale(1.2);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.22),
     0 0 0 1px rgba(0, 0, 0, 0.06);
-  outline: none;
+}
+
+.swpfg-cluster-wrap {
+  background: transparent !important;
+  border: 0 !important;
+}
+.swpfg-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: #5f7a5b;
+  color: #faf7f2;
+  font-size: 13px;
+  font-weight: 600;
+  border: 2px solid #faf7f2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.leaflet-container {
+  font-family: inherit;
+  background: #f3eee5;
+}
+.leaflet-control-attribution {
+  background: rgba(250, 247, 242, 0.85) !important;
+  font-size: 11px;
 }
 @keyframes swpfg-bob {
   0%,

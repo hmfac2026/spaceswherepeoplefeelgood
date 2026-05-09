@@ -2,49 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import mb from "mapbox-gl/dist/mapbox-gl-csp";
-import type {
-  ExpressionSpecification,
-  GeoJSONSource,
-  Map as MapType,
-} from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
-import { CATEGORIES } from "@/lib/categories";
+import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import type { Map as LeafletMap } from "leaflet";
+import type { MarkerClusterGroup } from "leaflet";
+import { categoryColor } from "@/lib/categories";
 import type { PlaceMapItem } from "@/lib/types";
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-const STYLE_URL = "mapbox://styles/mapbox/streets-v12";
-const SOURCE_ID = "places";
-const CLUSTER_LAYER = "clusters";
-const COUNT_LAYER = "cluster-count";
-const POINT_LAYER = "unclustered";
-
-function categoryColorExpression(): ExpressionSpecification {
-  const expr: ExpressionSpecification = [
-    "match",
-    ["get", "category"],
-    ...CATEGORIES.flatMap((c) => [c.value, c.color] as [string, string]),
-    "#7a7a72",
-  ];
-  return expr;
-}
-
-function toFeatureCollection(
-  places: PlaceMapItem[],
-): GeoJSON.FeatureCollection {
-  return {
-    type: "FeatureCollection",
-    features: places.map((p) => ({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [p.lng, p.lat] },
-      properties: { id: p.id, name: p.name, category: p.category },
-    })),
-  };
-}
+const TILE_URL =
+  "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const TILE_ATTR =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 export function PlaceMap() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<MapType | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const clusterRef = useRef<MarkerClusterGroup | null>(null);
   const [places, setPlaces] = useState<PlaceMapItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -68,186 +42,106 @@ export function PlaceMap() {
   }, []);
 
   useEffect(() => {
-    if (!containerRef.current || !MAPBOX_TOKEN) return;
+    if (!containerRef.current) return;
+    let cancelled = false;
 
-    mb.accessToken = MAPBOX_TOKEN;
-    mb.workerUrl = "/mapbox-gl-csp-worker.js";
+    (async () => {
+      const L = (await import("leaflet")).default;
+      await import("leaflet.markercluster");
+      if (cancelled || !containerRef.current || mapRef.current) return;
 
-    const map: MapType = new mb.Map({
-      container: containerRef.current,
-      style: STYLE_URL,
-      projection: "mercator",
-      center: [0, 25],
-      zoom: 1.6,
-      minZoom: 1.2,
-      maxZoom: 18,
-      pitch: 0,
-      bearing: 0,
-      dragRotate: false,
-      pitchWithRotate: false,
-      attributionControl: false,
+      const map = L.map(containerRef.current, {
+        center: [25, 0],
+        zoom: 2,
+        minZoom: 2,
+        maxZoom: 18,
+        worldCopyJump: true,
+        zoomControl: true,
+        attributionControl: true,
+      });
+
+      L.tileLayer(TILE_URL, {
+        attribution: TILE_ATTR,
+        subdomains: "abcd",
+        maxZoom: 20,
+        detectRetina: true,
+      }).addTo(map);
+
+      mapRef.current = map;
+    })().catch((e) => {
+      if (!cancelled) setError((e as Error).message);
     });
-
-    map.touchZoomRotate.disableRotation();
-
-    map.addControl(
-      new mb.AttributionControl({ compact: true }),
-      "bottom-right",
-    );
-    map.addControl(
-      new mb.NavigationControl({ showCompass: false }),
-      "top-right",
-    );
-
-    map.on("style.load", () => {
-      map.setProjection("mercator");
-    });
-
-    mapRef.current = map;
 
     return () => {
-      map.remove();
+      cancelled = true;
+      mapRef.current?.remove();
       mapRef.current = null;
+      clusterRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !places) return;
+    if (!places) return;
+    let cancelled = false;
 
-    const data = toFeatureCollection(places);
+    (async () => {
+      const L = (await import("leaflet")).default;
+      await import("leaflet.markercluster");
+      const map = mapRef.current;
+      if (cancelled || !map) return;
 
-    const setupLayers = () => {
-      if (map.getSource(SOURCE_ID)) {
-        (map.getSource(SOURCE_ID) as GeoJSONSource).setData(data);
-      } else {
-        map.addSource(SOURCE_ID, {
-          type: "geojson",
-          data,
-          cluster: true,
-          clusterRadius: 50,
-          clusterMaxZoom: 8,
-        });
-
-        map.addLayer({
-          id: CLUSTER_LAYER,
-          type: "circle",
-          source: SOURCE_ID,
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": "#5f7a5b",
-            "circle-opacity": 0.9,
-            "circle-stroke-color": "#faf7f2",
-            "circle-stroke-width": 2,
-            "circle-radius": [
-              "step",
-              ["get", "point_count"],
-              16,
-              5,
-              22,
-              20,
-              28,
-            ],
-          },
-        });
-
-        map.addLayer({
-          id: COUNT_LAYER,
-          type: "symbol",
-          source: SOURCE_ID,
-          filter: ["has", "point_count"],
-          layout: {
-            "text-field": ["get", "point_count_abbreviated"],
-            "text-size": 12,
-            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-          },
-          paint: { "text-color": "#faf7f2" },
-        });
-
-        map.addLayer({
-          id: POINT_LAYER,
-          type: "circle",
-          source: SOURCE_ID,
-          filter: ["!", ["has", "point_count"]],
-          paint: {
-            "circle-color": categoryColorExpression(),
-            "circle-radius": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              1,
-              5,
-              10,
-              8,
-              16,
-              11,
-            ],
-            "circle-stroke-color": "#faf7f2",
-            "circle-stroke-width": 2,
-          },
-        });
-
-        map.on("click", CLUSTER_LAYER, (e) => {
-          const f = map.queryRenderedFeatures(e.point, {
-            layers: [CLUSTER_LAYER],
-          })[0];
-          if (!f) return;
-          const clusterId = f.properties?.cluster_id as number;
-          const src = map.getSource(SOURCE_ID) as GeoJSONSource;
-          src.getClusterExpansionZoom(clusterId, (err, zoom) => {
-            if (err || zoom == null) return;
-            const geom = f.geometry as GeoJSON.Point;
-            map.easeTo({
-              center: [geom.coordinates[0], geom.coordinates[1]],
-              zoom,
-            });
-          });
-        });
-
-        map.on("click", POINT_LAYER, (e) => {
-          const id = e.features?.[0]?.properties?.id as string | undefined;
-          if (id) router.push(`/place/${id}`);
-        });
-
-        map.on("mouseenter", CLUSTER_LAYER, () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", CLUSTER_LAYER, () => {
-          map.getCanvas().style.cursor = "";
-        });
-        map.on("mouseenter", POINT_LAYER, () => {
-          map.getCanvas().style.cursor = "pointer";
-        });
-        map.on("mouseleave", POINT_LAYER, () => {
-          map.getCanvas().style.cursor = "";
-        });
+      if (clusterRef.current) {
+        map.removeLayer(clusterRef.current);
+        clusterRef.current = null;
       }
+
+      const cluster = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        iconCreateFunction: (c) => {
+          const n = c.getChildCount();
+          return L.divIcon({
+            html: `<span class="swpfg-cluster">${n}</span>`,
+            className: "swpfg-cluster-wrap",
+            iconSize: [36, 36],
+          });
+        },
+      });
+
+      const bounds = L.latLngBounds([]);
+
+      for (const p of places) {
+        const icon = L.divIcon({
+          className: "swpfg-marker-wrap",
+          html: `<span class="swpfg-marker" style="background:${categoryColor(p.category)}"></span>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        });
+        const marker = L.marker([p.lat, p.lng], {
+          icon,
+          title: p.name,
+          alt: p.name,
+        });
+        marker.on("click", () => router.push(`/place/${p.id}`));
+        cluster.addLayer(marker);
+        bounds.extend([p.lat, p.lng]);
+      }
+
+      map.addLayer(cluster);
+      clusterRef.current = cluster;
 
       if (places.length > 0) {
-        const bounds = new mb.LngLatBounds();
-        places.forEach((p) => bounds.extend([p.lng, p.lat]));
-        map.fitBounds(bounds, {
-          padding: { top: 80, bottom: 80, left: 60, right: 60 },
-          maxZoom: 6,
-          duration: 800,
-        });
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 });
       }
+    })().catch((e) => {
+      if (!cancelled) setError((e as Error).message);
+    });
+
+    return () => {
+      cancelled = true;
     };
-
-    if (map.isStyleLoaded()) {
-      setupLayers();
-    } else {
-      map.once("style.load", setupLayers);
-    }
   }, [places, router]);
-
-  if (!MAPBOX_TOKEN) {
-    return (
-      <div className="text-ink-soft flex h-full items-center justify-center text-sm">
-        Map unavailable.
-      </div>
-    );
-  }
 
   return (
     <div className="relative h-full w-full">
