@@ -8,7 +8,7 @@ import { CATEGORIES } from "@/lib/categories";
 import type { PlaceMapItem } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-const STYLE_URL = "mapbox://styles/mapbox/light-v11";
+const STYLE_URL = "mapbox://styles/mapbox/streets-v12";
 const SOURCE_ID = "places";
 const CLUSTER_LAYER = "clusters";
 const COUNT_LAYER = "cluster-count";
