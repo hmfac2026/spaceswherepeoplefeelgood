@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import mapboxgl, { type GeoJSONSource } from "mapbox-gl";
+import mb from "mapbox-gl/dist/mapbox-gl-csp";
+import type {
+  ExpressionSpecification,
+  GeoJSONSource,
+  Map as MapType,
+} from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { CATEGORIES } from "@/lib/categories";
 import type { PlaceMapItem } from "@/lib/types";
@@ -14,8 +19,8 @@ const CLUSTER_LAYER = "clusters";
 const COUNT_LAYER = "cluster-count";
 const POINT_LAYER = "unclustered";
 
-function categoryColorExpression(): mapboxgl.ExpressionSpecification {
-  const expr: mapboxgl.ExpressionSpecification = [
+function categoryColorExpression(): ExpressionSpecification {
+  const expr: ExpressionSpecification = [
     "match",
     ["get", "category"],
     ...CATEGORIES.flatMap((c) => [c.value, c.color] as [string, string]),
@@ -39,7 +44,7 @@ function toFeatureCollection(
 
 export function PlaceMap() {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<MapType | null>(null);
   const [places, setPlaces] = useState<PlaceMapItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -65,9 +70,10 @@ export function PlaceMap() {
   useEffect(() => {
     if (!containerRef.current || !MAPBOX_TOKEN) return;
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    mb.accessToken = MAPBOX_TOKEN;
+    mb.workerUrl = "/mapbox-gl-csp-worker.js";
 
-    const map = new mapboxgl.Map({
+    const map: MapType = new mb.Map({
       container: containerRef.current,
       style: STYLE_URL,
       projection: "mercator",
@@ -85,11 +91,11 @@ export function PlaceMap() {
     map.touchZoomRotate.disableRotation();
 
     map.addControl(
-      new mapboxgl.AttributionControl({ compact: true }),
+      new mb.AttributionControl({ compact: true }),
       "bottom-right",
     );
     map.addControl(
-      new mapboxgl.NavigationControl({ showCompass: false }),
+      new mb.NavigationControl({ showCompass: false }),
       "top-right",
     );
 
@@ -218,7 +224,7 @@ export function PlaceMap() {
       }
 
       if (places.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
+        const bounds = new mb.LngLatBounds();
         places.forEach((p) => bounds.extend([p.lng, p.lat]));
         map.fitBounds(bounds, {
           padding: { top: 80, bottom: 80, left: 60, right: 60 },
