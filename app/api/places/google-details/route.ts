@@ -37,8 +37,6 @@ export async function GET(req: Request) {
     lng: details.lng,
     photoUrl: details.photoUrl,
     suggestedCategory: categoryFromGoogleTypes(details.types),
-    existing: existing
-      ? { id: existing.id, status: existing.status }
-      : null,
+    existing: existing ? { id: existing.id, status: existing.status } : null,
   });
 }

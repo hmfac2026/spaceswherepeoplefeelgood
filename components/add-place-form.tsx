@@ -127,9 +127,7 @@ export function AddPlaceForm() {
           setStep("search");
           setSelected(null);
         }}
-        onContinue={() =>
-          setStep(skipCategory ? "questions" : "category")
-        }
+        onContinue={() => setStep(skipCategory ? "questions" : "category")}
       />
     );
   }
@@ -172,7 +170,9 @@ export function AddPlaceForm() {
   }
 
   if (step === "done" && submitResult) {
-    return <DoneStep result={submitResult} alreadyExists={!!selected?.existing} />;
+    return (
+      <DoneStep result={submitResult} alreadyExists={!!selected?.existing} />
+    );
   }
 
   return null;
@@ -254,12 +254,10 @@ function SearchStep({
         placeholder="A café, a park, a hotel…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="border-rule focus:border-sage w-full rounded-md border bg-white px-4 py-3 text-base outline-none transition-colors"
+        className="border-rule focus:border-sage w-full rounded-md border bg-white px-4 py-3 text-base transition-colors outline-none"
       />
 
-      {loading && (
-        <p className="text-ink-soft mt-3 text-sm">Finding places…</p>
-      )}
+      {loading && <p className="text-ink-soft mt-3 text-sm">Finding places…</p>}
 
       {!loading && predictions.length > 0 && (
         <ul className="border-rule/60 mt-3 divide-y divide-current/10 overflow-hidden rounded-md border bg-white">
@@ -272,9 +270,7 @@ function SearchStep({
               >
                 <div className="font-medium">{p.mainText}</div>
                 {p.secondaryText && (
-                  <div className="text-ink-soft text-sm">
-                    {p.secondaryText}
-                  </div>
+                  <div className="text-ink-soft text-sm">{p.secondaryText}</div>
                 )}
               </button>
             </li>
@@ -336,7 +332,12 @@ function ConfirmStep({
         </div>
       )}
 
-      <FormNav onBack={onBack} backLabel="Search again" onContinue={onContinue} continueLabel="Yes, that's it" />
+      <FormNav
+        onBack={onBack}
+        backLabel="Search again"
+        onContinue={onContinue}
+        continueLabel="Yes, that's it"
+      />
     </StepShell>
   );
 }
@@ -392,9 +393,11 @@ function QuestionsStep({
   onContinue,
 }: {
   answers: { specialToYou: string; energy: string; whatToDo: string };
-  onChange: (
-    next: { specialToYou: string; energy: string; whatToDo: string },
-  ) => void;
+  onChange: (next: {
+    specialToYou: string;
+    energy: string;
+    whatToDo: string;
+  }) => void;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -452,7 +455,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={4}
-        className="border-rule focus:border-sage w-full rounded-md border bg-white px-4 py-3 leading-relaxed outline-none transition-colors"
+        className="border-rule focus:border-sage w-full rounded-md border bg-white px-4 py-3 leading-relaxed transition-colors outline-none"
       />
       <div className="text-ink-soft mt-1.5 flex justify-between text-xs">
         <span className={tooShort || tooLong ? "text-red-700" : ""}>

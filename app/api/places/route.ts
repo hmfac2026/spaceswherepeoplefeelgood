@@ -4,6 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { entries, places, users } from "@/db/schema";
 import { CATEGORY_VALUES, type CategoryValue } from "@/lib/categories";
+import { sendSubmissionReceivedEmail } from "@/lib/email";
 import { placeDetails } from "@/lib/google-places";
 import type { PlaceMapItem } from "@/lib/types";
 
@@ -45,7 +46,9 @@ function validateAnswer(s: unknown, field: string): string | { error: string } {
   if (typeof s !== "string") return { error: `${field} required` };
   const trimmed = s.trim();
   if (trimmed.length < MIN_LEN)
-    return { error: `${field} should be a bit longer (at least ${MIN_LEN} characters)` };
+    return {
+      error: `${field} should be a bit longer (at least ${MIN_LEN} characters)`,
+    };
   if (trimmed.length > MAX_LEN)
     return { error: `${field} is too long (max ${MAX_LEN} characters)` };
   return trimmed;
@@ -58,7 +61,7 @@ export async function POST(req: Request) {
   }
 
   const [user] = await db
-    .select({ id: users.id })
+    .select({ id: users.id, email: users.email })
     .from(users)
     .where(eq(users.clerkUserId, clerkUserId))
     .limit(1);
@@ -86,11 +89,14 @@ export async function POST(req: Request) {
   }
 
   const special = validateAnswer(body.specialToYou, "specialToYou");
-  if (typeof special !== "string") return NextResponse.json(special, { status: 400 });
+  if (typeof special !== "string")
+    return NextResponse.json(special, { status: 400 });
   const energy = validateAnswer(body.energy, "energy");
-  if (typeof energy !== "string") return NextResponse.json(energy, { status: 400 });
+  if (typeof energy !== "string")
+    return NextResponse.json(energy, { status: 400 });
   const whatToDo = validateAnswer(body.whatToDo, "whatToDo");
-  if (typeof whatToDo !== "string") return NextResponse.json(whatToDo, { status: 400 });
+  if (typeof whatToDo !== "string")
+    return NextResponse.json(whatToDo, { status: 400 });
 
   const googlePlaceId = body.googlePlaceId;
   const category = body.category as CategoryValue;
@@ -103,11 +109,18 @@ export async function POST(req: Request) {
 
   let placeId: string;
   let placeStatus: "pending" | "live" | "rejected";
+  let placeName: string;
   let createdNewPlace = false;
 
   if (existing) {
     placeId = existing.id;
     placeStatus = existing.status;
+    const [row] = await db
+      .select({ name: places.name })
+      .from(places)
+      .where(eq(places.id, existing.id))
+      .limit(1);
+    placeName = row?.name ?? "this place";
   } else {
     const details = await placeDetails(googlePlaceId);
     if (!details) {
@@ -134,6 +147,7 @@ export async function POST(req: Request) {
 
     placeId = inserted.id;
     placeStatus = "pending";
+    placeName = details.name;
     createdNewPlace = true;
   }
 
@@ -144,6 +158,13 @@ export async function POST(req: Request) {
     energy,
     whatToDo,
     status: "pending",
+  });
+
+  await sendSubmissionReceivedEmail(user.email, {
+    placeName,
+    specialToYou: special,
+    energy,
+    whatToDo,
   });
 
   return NextResponse.json({
