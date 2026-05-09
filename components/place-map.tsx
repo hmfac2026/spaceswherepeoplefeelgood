@@ -2,18 +2,42 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import mapboxgl from "mapbox-gl";
+import mapboxgl, { type GeoJSONSource } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { categoryColor } from "@/lib/categories";
+import { CATEGORIES, categoryColor } from "@/lib/categories";
 import type { PlaceMapItem } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const STYLE_URL = "mapbox://styles/mapbox/light-v11";
+const SOURCE_ID = "places";
+const CLUSTER_LAYER = "clusters";
+const COUNT_LAYER = "cluster-count";
+const POINT_LAYER = "unclustered";
+
+function categoryColorExpression(): mapboxgl.ExpressionSpecification {
+  const expr: mapboxgl.ExpressionSpecification = [
+    "match",
+    ["get", "category"],
+    ...CATEGORIES.flatMap((c) => [c.value, c.color] as [string, string]),
+    "#7a7a72",
+  ];
+  return expr;
+}
+
+function toFeatureCollection(places: PlaceMapItem[]): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: places.map((p) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+      properties: { id: p.id, name: p.name, category: p.category },
+    })),
+  };
+}
 
 export function PlaceMap() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [places, setPlaces] = useState<PlaceMapItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -44,7 +68,7 @@ export function PlaceMap() {
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE_URL,
-      projection: { name: "mercator" },
+      projection: "mercator",
       center: [0, 25],
       zoom: 1.6,
       minZoom: 1.2,
@@ -67,11 +91,13 @@ export function PlaceMap() {
       "top-right",
     );
 
+    map.on("style.load", () => {
+      map.setProjection("mercator");
+    });
+
     mapRef.current = map;
 
     return () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
       map.remove();
       mapRef.current = null;
     };
@@ -81,31 +107,117 @@ export function PlaceMap() {
     const map = mapRef.current;
     if (!map || !places) return;
 
-    const addMarkers = () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
+    const data = toFeatureCollection(places);
 
-      const bounds = new mapboxgl.LngLatBounds();
-
-      places.forEach((p) => {
-        const el = document.createElement("button");
-        el.type = "button";
-        el.className = "swpfg-marker";
-        el.setAttribute("aria-label", `${p.name}`);
-        el.style.background = categoryColor(p.category);
-        el.addEventListener("click", (e) => {
-          e.stopPropagation();
-          router.push(`/place/${p.id}`);
+    const setupLayers = () => {
+      if (map.getSource(SOURCE_ID)) {
+        (map.getSource(SOURCE_ID) as GeoJSONSource).setData(data);
+      } else {
+        map.addSource(SOURCE_ID, {
+          type: "geojson",
+          data,
+          cluster: true,
+          clusterRadius: 50,
+          clusterMaxZoom: 8,
         });
 
-        const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
-          .setLngLat([p.lng, p.lat])
-          .addTo(map);
-        markersRef.current.push(marker);
-        bounds.extend([p.lng, p.lat]);
-      });
+        map.addLayer({
+          id: CLUSTER_LAYER,
+          type: "circle",
+          source: SOURCE_ID,
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-color": "#5f7a5b",
+            "circle-opacity": 0.9,
+            "circle-stroke-color": "#faf7f2",
+            "circle-stroke-width": 2,
+            "circle-radius": [
+              "step",
+              ["get", "point_count"],
+              16,
+              5,
+              22,
+              20,
+              28,
+            ],
+          },
+        });
+
+        map.addLayer({
+          id: COUNT_LAYER,
+          type: "symbol",
+          source: SOURCE_ID,
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": ["get", "point_count_abbreviated"],
+            "text-size": 12,
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+          },
+          paint: { "text-color": "#faf7f2" },
+        });
+
+        map.addLayer({
+          id: POINT_LAYER,
+          type: "circle",
+          source: SOURCE_ID,
+          filter: ["!", ["has", "point_count"]],
+          paint: {
+            "circle-color": categoryColorExpression(),
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              1,
+              5,
+              10,
+              8,
+              16,
+              11,
+            ],
+            "circle-stroke-color": "#faf7f2",
+            "circle-stroke-width": 2,
+          },
+        });
+
+        map.on("click", CLUSTER_LAYER, (e) => {
+          const f = map.queryRenderedFeatures(e.point, {
+            layers: [CLUSTER_LAYER],
+          })[0];
+          if (!f) return;
+          const clusterId = f.properties?.cluster_id as number;
+          const src = map.getSource(SOURCE_ID) as GeoJSONSource;
+          src.getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err || zoom == null) return;
+            const geom = f.geometry as GeoJSON.Point;
+            map.easeTo({
+              center: [geom.coordinates[0], geom.coordinates[1]],
+              zoom,
+            });
+          });
+        });
+
+        map.on("click", POINT_LAYER, (e) => {
+          const id = e.features?.[0]?.properties?.id as string | undefined;
+          if (id) router.push(`/place/${id}`);
+        });
+
+        map.on("mouseenter", CLUSTER_LAYER, () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", CLUSTER_LAYER, () => {
+          map.getCanvas().style.cursor = "";
+        });
+        map.on("mouseenter", POINT_LAYER, () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", POINT_LAYER, () => {
+          map.getCanvas().style.cursor = "";
+        });
+      }
 
       if (places.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        places.forEach((p) => bounds.extend([p.lng, p.lat]));
         map.fitBounds(bounds, {
           padding: { top: 80, bottom: 80, left: 60, right: 60 },
           maxZoom: 6,
@@ -115,9 +227,9 @@ export function PlaceMap() {
     };
 
     if (map.isStyleLoaded()) {
-      addMarkers();
+      setupLayers();
     } else {
-      map.once("load", addMarkers);
+      map.once("style.load", setupLayers);
     }
   }, [places, router]);
 

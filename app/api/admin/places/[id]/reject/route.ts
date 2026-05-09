@@ -13,10 +13,7 @@ export async function POST(
   }
 
   const { id } = await params;
-  await db
-    .update(places)
-    .set({ status: "rejected" })
-    .where(eq(places.id, id));
+  await db.update(places).set({ status: "rejected" }).where(eq(places.id, id));
 
   return NextResponse.json({ ok: true });
 }

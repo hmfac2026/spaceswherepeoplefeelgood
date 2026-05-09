@@ -105,8 +105,8 @@ export default async function AdminPage() {
                   <span className="text-ink">
                     {p.submitterName ?? p.submitterEmail}
                   </span>{" "}
-                  ({p.submitterEmail}) · {submitterCounts.get(p.submitterEmail) ?? 0}{" "}
-                  approved before
+                  ({p.submitterEmail}) ·{" "}
+                  {submitterCounts.get(p.submitterEmail) ?? 0} approved before
                 </p>
                 <ModerationActions
                   approveUrl={`/api/admin/places/${p.id}/approve`}
@@ -140,8 +140,8 @@ export default async function AdminPage() {
                   <span className="text-ink">
                     {e.submitterName ?? e.submitterEmail}
                   </span>{" "}
-                  ({e.submitterEmail}) · {submitterCounts.get(e.submitterEmail) ?? 0}{" "}
-                  approved before
+                  ({e.submitterEmail}) ·{" "}
+                  {submitterCounts.get(e.submitterEmail) ?? 0} approved before
                 </p>
                 <div className="mt-5 space-y-4 text-sm">
                   <ReviewBlock label="Special to you">

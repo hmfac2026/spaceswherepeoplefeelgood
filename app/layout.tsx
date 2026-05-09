@@ -17,13 +17,27 @@ const inter = Inter({
   display: "swap",
 });
 
+const TITLE = "Spaces Where People Feel Good";
+const DESCRIPTION =
+  "A community-curated map of places with good energy — and a community of people who find them.";
+
 export const metadata: Metadata = {
-  title: "Spaces Where People Feel Good",
-  description:
-    "A community-curated map of places with good energy — and a community of people who find them.",
+  title: { default: TITLE, template: `%s · ${TITLE}` },
+  description: DESCRIPTION,
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   ),
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    type: "website",
+    siteName: TITLE,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

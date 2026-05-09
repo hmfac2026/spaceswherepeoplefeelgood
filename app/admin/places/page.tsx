@@ -72,9 +72,7 @@ export default async function AllPlacesPage({
 
       <div className="border-rule/60 divide-rule/60 divide-y rounded-md border bg-white">
         {filtered.length === 0 && (
-          <p className="text-ink-soft p-6 text-center text-sm">
-            Nothing here.
-          </p>
+          <p className="text-ink-soft p-6 text-center text-sm">Nothing here.</p>
         )}
         {filtered.map((p) => (
           <div
