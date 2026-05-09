@@ -58,7 +58,7 @@ export function DisplayNameForm({ initial }: { initial: string | null }) {
           maxLength={60}
           required
           placeholder="What should we call you?"
-          className="border-rule focus:border-sage flex-1 rounded-md border px-3 py-2 outline-none transition-colors"
+          className="border-rule focus:border-sage flex-1 rounded-md border px-3 py-2 transition-colors outline-none"
         />
         <button
           type="submit"
@@ -71,9 +71,7 @@ export function DisplayNameForm({ initial }: { initial: string | null }) {
       {result?.error && (
         <p className="mt-2 text-sm text-red-700">{result.error}</p>
       )}
-      {result?.ok && (
-        <p className="text-ink-soft mt-2 text-sm">Saved.</p>
-      )}
+      {result?.ok && <p className="text-ink-soft mt-2 text-sm">Saved.</p>}
     </form>
   );
 }

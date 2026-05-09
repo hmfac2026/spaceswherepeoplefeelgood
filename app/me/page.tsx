@@ -92,7 +92,8 @@ export default async function MePage() {
         <ul className="divide-rule/70 mt-12 divide-y">
           {contributions.map((c) => {
             const status = c.entryStatus;
-            const liveAndVisible = status === "live" && c.placeStatus === "live";
+            const liveAndVisible =
+              status === "live" && c.placeStatus === "live";
             const Inner = (
               <div className="flex items-baseline justify-between gap-4 py-5">
                 <div className="min-w-0">

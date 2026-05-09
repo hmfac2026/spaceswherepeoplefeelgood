@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { and, asc, eq } from "drizzle-orm";
+import { cookies } from "next/headers";
+import { and, asc, count, eq } from "drizzle-orm";
+import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
-import { entries, places, users } from "@/db/schema";
+import { affirmations, entries, places, users } from "@/db/schema";
 import { categoryColor, categoryLabel } from "@/lib/categories";
+import { readAnonId } from "@/lib/anon-cookie";
+import { AffirmButton } from "@/components/affirm-button";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +38,52 @@ async function getPlace(id: string) {
   return { place, entries: entryRows };
 }
 
+async function getAffirmationState(placeId: string) {
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(affirmations)
+    .where(eq(affirmations.placeId, placeId));
+
+  const total = Number(n);
+
+  const { userId: clerkUserId } = await auth();
+
+  if (clerkUserId) {
+    const [u] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.clerkUserId, clerkUserId))
+      .limit(1);
+    if (!u) return { count: total, affirmed: false };
+    const [row] = await db
+      .select({ id: affirmations.id })
+      .from(affirmations)
+      .where(
+        and(
+          eq(affirmations.placeId, placeId),
+          eq(affirmations.userId, u.id),
+        ),
+      )
+      .limit(1);
+    return { count: total, affirmed: !!row };
+  }
+
+  const cookieStore = await cookies();
+  const anonId = readAnonId(cookieStore);
+  if (!anonId) return { count: total, affirmed: false };
+  const [row] = await db
+    .select({ id: affirmations.id })
+    .from(affirmations)
+    .where(
+      and(
+        eq(affirmations.placeId, placeId),
+        eq(affirmations.anonCookieId, anonId),
+      ),
+    )
+    .limit(1);
+  return { count: total, affirmed: !!row };
+}
+
 const formatDate = (d: Date) =>
   new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -52,6 +102,7 @@ export default async function PlacePage({
   const { place, entries: entryList } = data;
   const color = categoryColor(place.category);
   const label = categoryLabel(place.category);
+  const affirm = await getAffirmationState(place.id);
 
   return (
     <article className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
@@ -92,6 +143,14 @@ export default async function PlacePage({
           />
         </div>
       )}
+
+      <div className="mb-10">
+        <AffirmButton
+          placeId={place.id}
+          initialCount={affirm.count}
+          initialAffirmed={affirm.affirmed}
+        />
+      </div>
 
       {entryList.length === 0 ? (
         <p className="text-ink-soft py-8 text-center text-sm">
