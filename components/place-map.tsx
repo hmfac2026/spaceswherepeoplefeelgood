@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import mapboxgl, { type GeoJSONSource } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { CATEGORIES, categoryColor } from "@/lib/categories";
+import { CATEGORIES } from "@/lib/categories";
 import type { PlaceMapItem } from "@/lib/types";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -24,7 +24,9 @@ function categoryColorExpression(): mapboxgl.ExpressionSpecification {
   return expr;
 }
 
-function toFeatureCollection(places: PlaceMapItem[]): GeoJSON.FeatureCollection {
+function toFeatureCollection(
+  places: PlaceMapItem[],
+): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: places.map((p) => ({
